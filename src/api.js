@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+/* eslint-disable class-methods-use-this */
 
 import WebSocket from 'ws';
 import readlineSync from 'readline-sync';
@@ -7,11 +8,11 @@ import logger from './logger';
 
 const baseURL = 'wss://api.foxbitapi.com.br/WSGateway/';
 
-export const GetUserInfo = 'GetUserInfo';
-export const Authenticate2FA = 'Authenticate2FA';
-export const WebAuthenticateUser = 'WebAuthenticateUser';
+const GetUserInfo = 'GetUserInfo';
+const Authenticate2FA = 'Authenticate2FA';
+const WebAuthenticateUser = 'WebAuthenticateUser';
 
-export class API {
+class API {
     constructor() {
         this.userID = '';
         this.username = '';
@@ -19,7 +20,7 @@ export class API {
         this.isAuthenticated = false;
 
         this.messageFrame = {
-            m: 0, // MessageType (0_Request / 1_Reply / 2_Subscribe / 3_Event / 4_Unsubscribe / Error)
+            m: 0, // MessageType (0_Request|1_Reply|2_Subscribe|3_Event|4_Unsubscribe|Error)
             i: 0, // Sequence Number
             n: '', // Function Name
             o: '', // Payload
@@ -68,37 +69,44 @@ export class API {
         this.send(GetUserInfo, {});
     }
 
-    handleMessage(data) {
-        const messageFrame = JSON.parse(data);
+    handleWebAuthenticateUserMessage(messageFrame) {
+        logger.info(`Receiving <- (${messageFrame.n}) : ${messageFrame.o}`);
+
+        if (!this.isAuthenticated) {
+            const payload = JSON.parse(messageFrame.o);
+            if (payload.errormsg) {
+                this.authenticate();
+            } else {
+                this.authenticate2FA();
+            }
+        }
+    }
+
+    handleAuthenticate2FAMessage(messageFrame) {
+        logger.info(`Receiving <- (${messageFrame.n}) : ${messageFrame.o}`);
+
         const payload = JSON.parse(messageFrame.o);
 
-        logger.info(`Receiving <- (${messageFrame.n}) : ${JSON.stringify(payload, null, 2)}`);
+        this.isAuthenticated = payload.Authenticated;
+        if (this.isAuthenticated) {
+            this.userID = JSON.stringify(payload.UserId);
+            this.sessionToken = JSON.stringify(payload.SessionToken);
 
-        switch (messageFrame.n) {
-        case WebAuthenticateUser:
-            if (!this.isAuthenticated) {
-                if (payload.errormsg) {
-                    this.authenticate();
-                } else {
-                    this.authenticate2FA();
-                }
-            }
+            logger.info(`Access granted for ${this.username}`);
+        }
+    }
 
-            break;
 
-        case Authenticate2FA:
-            this.isAuthenticated = payload.Authenticated;
-            if (this.isAuthenticated) {
-                this.userID = JSON.stringify(payload.UserId);
-                this.sessionToken = JSON.stringify(payload.SessionToken);
+    handleUnhandledMessage(messageFrame) {
+        logger.info(`Receiving <- (${messageFrame.n}) : ${JSON.stringify(messageFrame)}`);
+    }
 
-                logger.info(`Access granted for ${this.username}`);
-            }
-
-            break;
-
-        default:
-            break;
+    handleMessage(data) {
+        const messageFrame = JSON.parse(data);
+        if (this[`handle${messageFrame.n}Message`]) {
+            this[`handle${messageFrame.n}Message`](messageFrame);
+        } else {
+            this.handleUnhandledMessage(messageFrame);
         }
     }
 
@@ -113,3 +121,5 @@ export class API {
         });
     }
 }
+
+export default API;

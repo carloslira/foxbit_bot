@@ -1,13 +1,35 @@
+import chalk from 'chalk';
+
 import {
     format,
     transports,
     createLogger,
 } from 'winston';
 
+const parseLevel = (info) => {
+    const level = info.level.toUpperCase();
+
+    switch (level) {
+    case 'INFO':
+        return chalk.blueBright(level);
+
+    case 'ERROR':
+        return chalk.redBright(level);
+
+    default:
+        return level;
+    }
+};
+
+const handleTemplate = (info) => {
+    const level = parseLevel(info);
+    return `${info.timestamp} [${level}]: ${info.message}`;
+};
+
 const logger = createLogger({
     format: format.combine(
         format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-        format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`),
+        format.printf(handleTemplate),
     ),
     transports: [
         new transports.File({

@@ -1,8 +1,5 @@
+import API from './api';
 import logger from './logger';
-
-const {
-    API,
-} = require('./api');
 
 const api = new API();
 
