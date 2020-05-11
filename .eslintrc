@@ -1,0 +1,16 @@
+{
+    "extends": "airbnb-base",
+    "parser": "babel-eslint",
+    "rules": {
+        "indent": ["error", 4],
+        "no-shadow": "off",
+        "no-loop-func": "off",
+        "no-param-reassign": "off",
+        "no-restricted-syntax": "off",
+        "import/no-unresolved": "off",
+        "import/prefer-default-export": "warn",
+        "import/no-extraneous-dependencies": "off",
+        "consistent-return": "off",
+        "radix": "off"
+    }
+}
